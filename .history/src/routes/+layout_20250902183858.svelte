@@ -19,9 +19,7 @@
 		{ href: '/worldmap', name: 'World Surfers', tooltip: 'D3 World Map' },
 		{ href: '/stensvelte', name: 'Stencil SSR', tooltip: 'Stencil SSR Integration' },
 		{ href: '/parallax', name: 'Parallax', tooltip: 'Parallax' },
-		{ href: '/form-builder', name: 'Form Builder', tooltip: 'Form Builder' },
-		{ href: '/cesdk', name: 'Creative Engine', tooltip: 'Creative Engine' },
-		{ href: '/cesdk-default', name: 'Creative Editor', tooltip: 'Creative Editor' }
+		{ href: '/form-builder', name: 'Form Builder', tooltip: 'Form Builder' }
 	];
 
 	onMount(() => {
