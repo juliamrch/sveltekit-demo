@@ -16,7 +16,7 @@
     /** @type {'local'}*/
     const ON_UPLOAD = 'local';
     const defaultConfig = {
-      license: '2DioKIdlbreg8B0Vu1VB6WwzVgshRoAVaAWTvgls2vCR_9tHkx4kZDEmH7ShB_fm', // replace it with a valid CE.SDK license key
+      license: '', // replace it with a valid CE.SDK license key
       callbacks: { onUpload: ON_UPLOAD }, // enable local file uploads in the Asset Library
       // other default configs...
     };
@@ -76,7 +76,7 @@
   <style>
     /* styling for the CE.SDK container element to take full viewport size */
     #cesdk_container {
-      height: 100%;
-      width: 100%;
+      height: 100vh;
+      width: 100vw;
     }
   </style>

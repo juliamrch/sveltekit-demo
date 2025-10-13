@@ -9,14 +9,14 @@
     // to store the CreativeEngine instance
       /** @type {any} */
     let engine = null;
-    // to store the ID of the video block added to the scene
+    // to store the ID of the image block added to the scene
     /** @type {number | null} */
-    let videoBlockId = null;
+    let imageBlockId = null;
   
     onMount(async () => {
       // your CE.SDK configurations
       const config = {
-        license: '', // replace this with your CE.SDK license
+        license: '2DioKIdlbreg8B0Vu1VB6WwzVgshRoAVaAWTvgls2vCR_9tHkx4kZDEmH7ShB_fm', // replace this with your CE.SDK license
       };
   
       // initialize CreativeEngine in headless mode
@@ -38,29 +38,32 @@
       // get the first page block
       const [page] = engine.block.findByType('page');
   
-      // append a block to show a video on the page
-      const videoBlock = engine.block.create('graphic');
-      videoBlockId = videoBlock;
-      engine.block.setShape(videoBlock, engine.block.createShape('rect'));
-      const videoFill = engine.block.createFill('video');
-      engine.block.setString(
-        videoFill,
-        'fill/video/fileURI',
-        'https://cdn.img.ly/assets/demo/v2/ly.img.video/videos/pexels-drone-footage-of-a-surfer-barrelling-a-wave-12715991.mp4'
-      );
-      engine.block.setFill(videoBlock, videoFill);
-      engine.block.setSize(videoBlock, 800, 450);
-      engine.block.appendChild(page, videoBlock);
+      // append a block to show an image on the page
+      const imageBlock = engine.block.create('graphic');
+      imageBlockId = imageBlock;
+      engine.block.setShape(imageBlock, engine.block.createShape('rect'));
+  
+      // fill the block with an image from a public source
+      const imageFill = engine.block.createFill('image');
+      engine.block.setSourceSet(imageFill, 'fill/image/sourceSet', [
+        {
+          uri: 'https://cdn.img.ly/assets/demo/v2/ly.img.video/videos/pexels-drone-footage-of-a-surfer-barrelling-a-wave-12715991.mp4',
+          width: 1024,
+          height: 683,
+        },
+      ]);
+      engine.block.setFill(imageBlock, imageFill);
+      engine.block.appendChild(page, imageBlock);
   
       // zoom to fit the page in the editor view
       engine.scene.zoomToBlock(page);
     });
   
-    // callback to scale the video block
+    // callback to change the opacity of the image
     function scaleMedia() {
-      if (engine && videoBlockId != null) {
-        // scale the video block by 150% on each click
-        engine.block.scale(videoBlockId, 1.5);
+      if (engine && imageBlockId != null) {
+        // reduce the opacity of the image by 20% at each click
+        engine.block.scale(imageBlockId, 1.5);
       }
     }
   </script>
@@ -68,7 +71,7 @@
   <div class="editor-container">
     <div class="canvas-container" bind:this="{canvasContainer}"></div>
     <div class="button-overlay">
-      <button on:click="{scaleMedia}">Scale +150%</button>
+      <button on:click="{scaleMedia}">Sale +150%</button>
     </div>
   </div>
 
