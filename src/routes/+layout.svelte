@@ -22,7 +22,8 @@
 		{ href: '/form-builder', name: 'Form Builder', tooltip: 'Form Builder' },
 		{ href: '/cesdk', name: 'Creative Engine', tooltip: 'Creative Engine' },
 		{ href: '/cesdk-default', name: 'Creative Editor', tooltip: 'Creative Editor' },
-		{ href: '/cesdk-template', name: 'Postcard Template', tooltip: 'Postcard Template' }
+		{ href: '/cesdk-template', name: 'Postcard Template', tooltip: 'Postcard Template' },
+		{ href: '/cesdk-download', name: 'Automatic Download', tooltip: 'Automatic Download' }
 	];
 
 	onMount(() => {
