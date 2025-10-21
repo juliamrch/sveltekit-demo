@@ -21,7 +21,8 @@
 		{ href: '/parallax', name: 'Parallax', tooltip: 'Parallax' },
 		{ href: '/form-builder', name: 'Form Builder', tooltip: 'Form Builder' },
 		{ href: '/cesdk', name: 'Creative Engine', tooltip: 'Creative Engine' },
-		{ href: '/cesdk-default', name: 'Creative Editor', tooltip: 'Creative Editor' }
+		{ href: '/cesdk-default', name: 'Creative Editor', tooltip: 'Creative Editor' },
+		{ href: '/cesdk-template', name: 'Postcard Template', tooltip: 'Postcard Template' }
 	];
 
 	onMount(() => {

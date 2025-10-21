@@ -9,6 +9,8 @@
     /** @type {any}*/
     let cesdk = null;
   
+    const DEFAULT_TEMPLATE_URL = 'https://cdn.img.ly/assets/demo/v2/ly.img.template/templates/cesdk_postcard_2.scene';
+
     // deafult CreativeEditor SDK configuration
     /** @type {Record<string, any>}*/
     export let config = {};
@@ -16,7 +18,7 @@
     /** @type {'local'}*/
     const ON_UPLOAD = 'local';
     const defaultConfig = {
-      license: '2DioKIdlbreg8B0Vu1VB6WwzVgshRoAVaAWTvgls2vCR_9tHkx4kZDEmH7ShB_fm', // replace it with a valid CE.SDK license key
+      license: '<YOUR_LICENSE_KEY>', // replace it with a valid CE.SDK license key
       callbacks: { onUpload: ON_UPLOAD }, // enable local file uploads in the Asset Library
       // other default configs...
     };
@@ -47,12 +49,50 @@
             cesdk.addDemoAssetSources({ sceneMode: 'Design' }),
           ]);
   
-          // create a new design scene in the editor
-          await cesdk.createDesignScene();
+          // load a predefined template; fallback to a blank scene when loading fails
+          try {
+            await cesdk.engine?.scene?.loadFromURL(DEFAULT_TEMPLATE_URL);
+          } catch (error) {
+            console.warn('Falling back to a blank scene because loading the default template failed.', error);
+            await cesdk.createDesignScene();
+          }
+          //instance.engine?.editor?.setSettingBool('controlGizmo/showRotateHandles', false);
+          
+          // Register a custom button component that exports the current scene as PDF
+          //instance.ui.registerComponent(
+          //  'convert.nav',
+          //  ({ builder: { Button }, engine }) => {
+          //    Button('convert-to-pdf', {
+          //      label: 'Convert To PDF',
+          //      icon: '@imgly/Download',
+          //      color: 'accent',
+          //      onClick: async () => {
+          //        // Export the current scene as a PDF blob
+          //        const scene = engine.scene.get();
+          //        const blob = await engine.block.export(scene, { mimeType: 'application/pdf' });
+          //        // Trigger download of the PDF blob
+          //        const element = document.createElement('a');
+          //        const downloadUrl = window.URL.createObjectURL(blob);
+          //        element.setAttribute('href', downloadUrl);
+          //        element.setAttribute('download', 'converted.pdf');
+          //        element.style.display = 'none';
+          //        element.click();
+          //        element.remove();
+          //        window.URL.revokeObjectURL(downloadUrl);
+          //      },
+          //    });
+          //  },
+          //);
+          // Add the custom button at the end of the navigation bar
+          //instance.ui.setNavigationBarOrder([
+          //  ...instance.ui.getNavigationBarOrder(),
+          //  'convert.nav',
+          //]);
         });
       } catch (err) {
         console.warn(`CreativeEditor SDK failed to mount.`, { err });
       }
+      
     });
   
     // hook to clean up when the component unmounts

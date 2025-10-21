@@ -16,7 +16,7 @@
     onMount(async () => {
       // your CE.SDK configurations
       const config = {
-        license: '', // replace this with your CE.SDK license
+        license: '<YOUR_LICENSE_KEY>', // replace this with your CE.SDK license
       };
   
       // initialize CreativeEngine in headless mode
@@ -34,9 +34,13 @@
         const page = engine.block.create('page');
         engine.block.appendChild(scene, page);
       }
-  
-      // get the first page block
+
+      // ensure we have a page to host the media
       const [page] = engine.block.findByType('page');
+      const targetPage = page ?? engine.block.create('page');
+      if (!page) {
+        engine.block.appendChild(scene, targetPage);
+      }
   
       // append a block to show a video on the page
       const videoBlock = engine.block.create('graphic');
@@ -49,26 +53,53 @@
         'https://cdn.img.ly/assets/demo/v2/ly.img.video/videos/pexels-drone-footage-of-a-surfer-barrelling-a-wave-12715991.mp4'
       );
       engine.block.setFill(videoBlock, videoFill);
-      engine.block.setSize(videoBlock, 800, 450);
-      engine.block.appendChild(page, videoBlock);
-  
-      // zoom to fit the page in the editor view
-      engine.scene.zoomToBlock(page);
+      engine.block.setSize(targetPage, 1280, 720, { maintainCrop: false });
+      engine.block.setSize(videoBlock, 640, 360);
+      engine.block.appendChild(targetPage, videoBlock);
+
+      // zoom to fit the video in the editor view
+      engine.scene.zoomToBlock(targetPage);
+      
     });
-  
+  // Code tests for guide
     // callback to scale the video block
     function scaleMedia() {
       if (engine && videoBlockId != null) {
         // scale the video block by 150% on each click
-        engine.block.scale(videoBlockId, 1.5);
+        //engine.block.scale(videoBlockId, 1.5, 0.5, 0.5);
+
+        // Let the Engine Handle Scaling
+        //engine.block.setWidthMode(videoBlockId, 'Absolute');
+        //const width = engine.block.getWidth(videoBlockId) * 1.5;
+        //engine.block.setWidth(videoBlockId, width, true );
+        //console.log(engine.block.findAllProperties(videoBlockId));
+
+        // Combine Crop-Scale with a Size Change
+        // => doesn't work as intented
+        //await engine.block.setCropScaleX(videoBlockId, 1.5);
+        //await engine.block.setWidthMode(videoBlockId, 'Absolute');
+        //const newWidth = (await engine.block.getWidth(videoBlockId)) * 1.5;
+        //await engine.block.setWidth(videoBlockId, newWidth);
+
+        // Maintain Crop
+        //engine.block.scale(videoBlockId, 1.5);
+        //engine.block.setWidthMode(videoBlockId, 'Absolute');
+        //const newWidth = engine.block.getWidth(videoBlockId) * 1.5;
+        //engine.block.setWidth(videoBlockId, newWidth, true);
+
+        // Rotate the clip by 90°
+        //engine.block.setRotation(videoBlockId, Math.PI / 2);
+        engine.block.setScopeEnabled(videoBlockId, 'layer/rotate', false);
+        
       }
+      
     }
   </script>
   
   <div class="editor-container">
     <div class="canvas-container" bind:this="{canvasContainer}"></div>
     <div class="button-overlay">
-      <button on:click="{scaleMedia}">Scale +150%</button>
+      <button on:click="{scaleMedia}">Rotate</button>
     </div>
   </div>
 
