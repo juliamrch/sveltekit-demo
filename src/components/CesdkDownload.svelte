@@ -84,5 +84,5 @@
 </script>
 
 <button id="download-headless" on:click={handleDownload} disabled={isExporting}>
-  {isExporting ? 'Charging...' : 'Download and example'}
+  {isExporting ? 'Charging...' : 'Download an example'}
 </button>

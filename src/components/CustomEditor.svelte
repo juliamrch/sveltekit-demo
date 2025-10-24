@@ -61,10 +61,44 @@
       engine.scene.zoomToBlock(targetPage);
       
     });
-  // Code tests for guide
-    // callback to scale the video block
-    function scaleMedia() {
-      if (engine && videoBlockId != null) {
+  // Code tests for guides
+  
+  //async function flipGroup() {
+    //const groupId = await engine.block.group([videoBlockId, videoBlockId2, videoBlockId3]);
+    //engine.block.setFlipVertical(groupId, true);
+
+  //};
+  //engine.block.setScopeEnabled(videoBlockId, "layer/flip", false);
+  async function flipVideo() {
+    //if (!engine || videoBlockId === null) {
+      //console.log('Engine or videoBlockId not ready yet');
+      //return;
+    //}
+    
+    engine.block.setFlipHorizontal(videoBlockId, true);
+    engine.block.setFlipVertical(videoBlockId, true);
+
+    //const flippedH = engine.block.getFlipHorizontal(videoBlockId);
+    //const flippedV = engine.block.getFlipVertical(videoBlockId);
+    //console.log(flippedH, flippedV);
+    //try {
+      //await fetch('/api/log-flip', {
+        //method: 'POST',
+        //headers: { 'Content-Type': 'application/json' },
+        //body: JSON.stringify({ flippedH, flippedV })
+      //});
+    //} catch (error) {
+      //console.error('Failed to report flip', error);
+    //}
+  };
+
+  async function resetFlip() {
+    const isFlipped = await engine.block.getFlipHorizontal(videoBlockId);
+    engine.block.setFlipHorizontal(videoBlockId, !isFlipped);
+  }
+  // callback to scale the video block
+    //function scaleMedia() {
+      //if (engine && videoBlockId != null) {
         // scale the video block by 150% on each click
         //engine.block.scale(videoBlockId, 1.5, 0.5, 0.5);
 
@@ -89,19 +123,21 @@
 
         // Rotate the clip by 90°
         //engine.block.setRotation(videoBlockId, Math.PI / 2);
-        engine.block.setScopeEnabled(videoBlockId, 'layer/rotate', false);
+        //engine.block.setScopeEnabled(videoBlockId, 'layer/rotate', false);
         
-      }
+      //}
       
-    }
+    //}
+    
   </script>
   
   <div class="editor-container">
     <div class="canvas-container" bind:this="{canvasContainer}"></div>
     <div class="button-overlay">
-      <button on:click="{scaleMedia}">Rotate</button>
+      <button on:click="{flipVideo}">Flip</button>
+      <button on:click="{resetFlip}">Reset Flip</button>
     </div>
-  </div>
+    </div>
 
   <style>
     .editor-container {
