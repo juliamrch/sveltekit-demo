@@ -11,7 +11,7 @@
     let engine = null;
     // to store the ID of the video block added to the scene
     /** @type {number | null} */
-    let videoBlockId = null;
+    let imageBlockId = null;
   
     onMount(async () => {
       // your CE.SDK configurations
@@ -43,22 +43,18 @@
       }
   
       // append a block to show a video on the page
-      const videoBlock = engine.block.create('graphic');
-      videoBlockId = videoBlock;
-      engine.block.setShape(videoBlock, engine.block.createShape('rect'));
-      const videoFill = engine.block.createFill('video');
+      imageBlockId = engine.block.create('graphic');
+      engine.block.setShape(imageBlockId, engine.block.createShape('rect'));
+      const imageFill = engine.block.createFill('image');
+      engine.block.setFill(imageBlockId, imageFill);
       engine.block.setString(
-        videoFill,
-        'fill/video/fileURI',
-        'https://cdn.img.ly/assets/demo/v2/ly.img.video/videos/pexels-drone-footage-of-a-surfer-barrelling-a-wave-12715991.mp4'
-      );
-      engine.block.setFill(videoBlock, videoFill);
-      engine.block.setSize(targetPage, 1280, 720, { maintainCrop: false });
-      engine.block.setSize(videoBlock, 640, 360);
-      engine.block.appendChild(targetPage, videoBlock);
+        imageFill,
+        'fill/image/imageFileURI',
+        'https://img.ly/static/ubq_samples/sample_1.jpg');
 
-      // zoom to fit the video in the editor view
+      engine.block.appendChild(targetPage, imageBlockId);
       engine.scene.zoomToBlock(targetPage);
+
       //engine.block.setTransformLocked(videoBlockId, true);
       // Prevent manual resizing
       //engine.editor.setGlobalScope('layer/resize', 'Defer'); // do this once, after init
@@ -72,14 +68,15 @@
 
   //};
   //engine.block.setScopeEnabled(videoBlockId, "layer/flip", false);
-  async function flipVideo() {
+  async function flipImage() {
     //if (!engine || videoBlockId === null) {
       //console.log('Engine or videoBlockId not ready yet');
       //return;
     //}
     
-    engine.block.setFlipHorizontal(videoBlockId, true);
+    engine.block.setFlipHorizontal(imageBlockId, true);
     engine.block.setFlipVertical(videoBlockId, true);
+    //engine.block.setFlipVertical(imageBlockId, true);
 
     //const flippedH = engine.block.getFlipHorizontal(videoBlockId);
     //const flippedV = engine.block.getFlipVertical(videoBlockId);
@@ -96,8 +93,8 @@
   };
 
   async function resetFlip() {
-    const isFlipped = await engine.block.getFlipHorizontal(videoBlockId);
-    engine.block.setFlipHorizontal(videoBlockId, !isFlipped);
+    const isFlipped = await engine.block.getFlipHorizontal(imageBlockId);
+    engine.block.setFlipHorizontal(imageBlockId, !isFlipped);
   }
 
   async function resizeVideo() {
@@ -106,10 +103,10 @@
     //engine.block.setHeight(videoBlockId, 720.0);
     
     // Percentage-based sizing relative to the parent (e.g., page)
-    engine.block.setWidthMode(videoBlockId,  'Percent');
-    engine.block.setHeightMode(videoBlockId, 'Percent');
-    engine.block.setWidth(videoBlockId,  1);   // full-width
-    engine.block.setHeight(videoBlockId, 0.5625);   // 16:9 ratio when width is 100 %
+    engine.block.setWidthMode(imageBlockId,  'Percent');
+    engine.block.setHeightMode(imageBlockId, 'Percent');
+    engine.block.setWidth(imageBlockId,  1);   // full-width
+    engine.block.setHeight(imageBlockId, 0.5625);   // 16:9 ratio when width is 100 %
   }
   // callback to scale the video block
     //function scaleMedia() {
@@ -149,7 +146,7 @@
   <div class="editor-container">
     <div class="canvas-container" bind:this="{canvasContainer}"></div>
     <div class="button-overlay">
-      <button on:click="{flipVideo}">Flip</button>
+      <button on:click="{flipImage}">Flip</button>
       <button on:click="{resetFlip}">Reset Flip</button>
       <button on:click="{resizeVideo}">Resize</button>
     </div>
