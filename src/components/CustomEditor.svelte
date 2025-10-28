@@ -59,7 +59,10 @@
 
       // zoom to fit the video in the editor view
       engine.scene.zoomToBlock(targetPage);
-      
+      engine.block.setTransformLocked(videoBlockId, true);
+      // Prevent manual resizing
+      //engine.editor.setGlobalScope('layer/resize', 'Defer'); // do this once, after init
+      //engine.block.setScopeEnabled(videoBlockId, "layer/resize", false);
     });
   // Code tests for guides
   
@@ -95,6 +98,18 @@
   async function resetFlip() {
     const isFlipped = await engine.block.getFlipHorizontal(videoBlockId);
     engine.block.setFlipHorizontal(videoBlockId, !isFlipped);
+  }
+
+  async function resizeVideo() {
+    // Set absolute size
+    //engine.block.setWidth(videoBlockId, 1280.0);
+    //engine.block.setHeight(videoBlockId, 720.0);
+    
+    // Percentage-based sizing relative to the parent (e.g., page)
+    engine.block.setWidthMode(videoBlockId,  'Percent');
+    engine.block.setHeightMode(videoBlockId, 'Percent');
+    engine.block.setWidth(videoBlockId,  1);   // full-width
+    engine.block.setHeight(videoBlockId, 0.5625);   // 16:9 ratio when width is 100 %
   }
   // callback to scale the video block
     //function scaleMedia() {
@@ -136,6 +151,7 @@
     <div class="button-overlay">
       <button on:click="{flipVideo}">Flip</button>
       <button on:click="{resetFlip}">Reset Flip</button>
+      <button on:click="{resizeVideo}">Resize</button>
     </div>
     </div>
 
