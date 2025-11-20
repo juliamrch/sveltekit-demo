@@ -1,156 +1,358 @@
 <script>
-    import { onMount } from 'svelte';
-    import CreativeEngine from '@cesdk/engine';
-  
-    /** @type {HTMLDivElement | null} */
-      // your CE.SDK configurations
-    // to store the DOM container where the CreativeEngine canvas will be attached
-    let canvasContainer = null;
-    // to store the CreativeEngine instance
-      /** @type {any} */
-    let engine = null;
-    // to store the ID of the video block added to the scene
-    /** @type {number | null} */
-    let imageBlockId = null;
-  
-    onMount(async () => {
-      // your CE.SDK configurations
-      const config = {
-        license: '<YOUR_LICENSE_KEY>', // replace this with your CE.SDK license
-      };
-  
-      // initialize CreativeEngine in headless mode
-      engine = await CreativeEngine.init(config);
-  
-      // append CE.SDK canvas to the DOM (optional)
-      if (canvasContainer && engine.element) {
-        canvasContainer.appendChild(engine.element);
-      }
-  
-      // get the current scene or create a new one
-      let scene = engine.scene.get();
-      if (!scene) {
-        scene = engine.scene.create();
-        const page = engine.block.create('page');
-        engine.block.appendChild(scene, page);
-      }
+  import { onDestroy, onMount } from 'svelte';
+  import CreativeEngine from '@cesdk/engine';
+  import { removeBackground } from '@imgly/background-removal';
 
-      // ensure we have a page to host the media
-      const [page] = engine.block.findByType('page');
-      const targetPage = page ?? engine.block.create('page');
-      if (!page) {
-        engine.block.appendChild(scene, targetPage);
-      }
-  
-      // append a block to show a video on the page
-      imageBlockId = engine.block.create('graphic');
-      engine.block.setShape(imageBlockId, engine.block.createShape('rect'));
-      const imageFill = engine.block.createFill('image');
-      engine.block.setFill(imageBlockId, imageFill);
-      engine.block.setString(
-        imageFill,
-        'fill/image/imageFileURI',
-        'https://img.ly/static/ubq_samples/sample_1.jpg');
+  /** @type {HTMLDivElement | null} */
+  let canvasContainer = null;
+  /** @type {any} */
+  let engine = null;
+  /** @type {number | null} */
+  let imageBlockId = null;
+  /** @type {number | null} */
+  let videoBlockId = null;
+  /** @type {number | null} */
+  let pageBlockId = null;
 
-      engine.block.appendChild(targetPage, imageBlockId);
-      engine.scene.zoomToBlock(targetPage);
+  const engineConfig = {
+    license: '<YOUR_CSDK_LICENSE>'
+  };
+  /** @type {{ fillId: number | null; previewUrl: string; objectUrl: string }} */
+  let fillState = {
+    fillId: null,
+    previewUrl: '',
+    objectUrl: ''
+  };
+  let originalImageUri = '';
+  let thumbnailEngine = null;
 
-      //engine.block.setTransformLocked(videoBlockId, true);
-      // Prevent manual resizing
-      //engine.editor.setGlobalScope('layer/resize', 'Defer'); // do this once, after init
-      //engine.block.setScopeEnabled(videoBlockId, "layer/resize", false);
-    });
-  // Code tests for guides
-  
-  //async function flipGroup() {
-    //const groupId = await engine.block.group([videoBlockId, videoBlockId2, videoBlockId3]);
-    //engine.block.setFlipVertical(groupId, true);
-
-  //};
-  //engine.block.setScopeEnabled(videoBlockId, "layer/flip", false);
-  async function flipImage() {
-    //if (!engine || videoBlockId === null) {
-      //console.log('Engine or videoBlockId not ready yet');
-      //return;
-    //}
-    
-    engine.block.setFlipHorizontal(imageBlockId, true);
-    engine.block.setFlipVertical(videoBlockId, true);
-    //engine.block.setFlipVertical(imageBlockId, true);
-
-    //const flippedH = engine.block.getFlipHorizontal(videoBlockId);
-    //const flippedV = engine.block.getFlipVertical(videoBlockId);
-    //console.log(flippedH, flippedV);
-    //try {
-      //await fetch('/api/log-flip', {
-        //method: 'POST',
-        //headers: { 'Content-Type': 'application/json' },
-        //body: JSON.stringify({ flippedH, flippedV })
-      //});
-    //} catch (error) {
-      //console.error('Failed to report flip', error);
-    //}
+  // Shared removal configuration so quality tweaks live in one place
+  const backgroundConfig = {
+    output: { format: 'image/png', quality: 1 },
+    model: 'isnet'
   };
 
+  function updateFillState(patch) {
+    fillState = { ...fillState, ...patch };
+  }
+
+  function withBlobUrl(blob, currentUrl, onApply) {
+    if (currentUrl) {
+      URL.revokeObjectURL(currentUrl);
+    }
+    const nextUrl = URL.createObjectURL(blob);
+    onApply(nextUrl);
+    return nextUrl;
+  }
+
+  function disposeObjectUrls(...urls) {
+    for (const url of urls) {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    }
+  }
+
+  function applyPreview(blob) {
+    withBlobUrl(blob, fillState.previewUrl, (url) => {
+      updateFillState({ previewUrl: url });
+    });
+  }
+
+  function applyFill(blob) {
+    if (!engine || fillState.fillId == null) return;
+    return withBlobUrl(blob, fillState.objectUrl, (url) => {
+      
+      engine.block.setString(fillState.fillId, 'fill/image/imageFileURI', url);
+      updateFillState({ objectUrl: url });
+    });
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  function toPdfBlob(data) {
+    return data instanceof Blob ? data : new Blob([data], { type: 'application/pdf' });
+  }
+
+  async function exportPageAsPdf(filename) {
+    if (!engine || pageBlockId == null) return;
+    const exportResult = await engine.block.export(pageBlockId, 'application/pdf');
+    downloadBlob(toPdfBlob(exportResult), filename);
+  }
+
+  async function getThumbnailEngine() {
+    if (thumbnailEngine) return thumbnailEngine;
+    thumbnailEngine = await CreativeEngine.init({ ...engineConfig, container: null });
+    return thumbnailEngine;
+  }
+
+  async function generateThumbnail(sceneData) {
+    const thumbEngine = await getThumbnailEngine();
+    await thumbEngine.scene.loadFromString(sceneData);
+    const [page] = thumbEngine.scene.getPages();
+    if (!page) return null;
+
+    const thumbnail = await thumbEngine.block.export(page, 'image/jpeg', {
+      targetWidth: 200,
+      targetHeight: 200,
+      quality: 0.7
+    });
+
+    return thumbnail instanceof Blob ? thumbnail : new Blob([thumbnail], { type: 'image/jpeg' });
+  }
+
+  function reportBatchMetrics(batchMetrics) {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      ...batchMetrics
+    };
+    console.table([entry]);
+    return fetch('/api/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    }).catch((error) => {
+      console.warn('Failed to report batch metrics', error);
+    });
+  }
+
+  onMount(async () => {
+    engine = await CreativeEngine.init(engineConfig);
+
+    if (canvasContainer && engine.element) {
+      canvasContainer.appendChild(engine.element);
+    }
+
+    let scene = engine.scene.get();
+    if (!scene) {
+      scene = engine.scene.create();
+      const page = engine.block.create('page');
+      engine.block.appendChild(scene, page);
+    }
+
+    const [page] = engine.block.findByType('page');
+    const targetPage = page ?? engine.block.create('page');
+    if (!page) {
+      engine.block.appendChild(scene, targetPage);
+    }
+    pageBlockId = targetPage;
+
+    imageBlockId = engine.block.create('graphic');
+    engine.block.setShape(imageBlockId, engine.block.createShape('rect'));
+    const fillId = engine.block.createFill('image');
+    updateFillState({ fillId });
+    engine.block.setFill(imageBlockId, fillId);
+
+    const demoImageUrl = new URL(
+      `${import.meta.env.BASE_URL}green-screen.png`,
+      window.location.origin
+    ).href;
+    originalImageUri = demoImageUrl;
+    engine.block.setString(fillId, 'fill/image/imageFileURI', demoImageUrl);
+
+    engine.block.appendChild(targetPage, imageBlockId);
+    engine.scene.zoomToBlock(targetPage);
+  });
+
+
+  onDestroy(() => {
+    disposeObjectUrls(fillState.previewUrl, fillState.objectUrl);
+    updateFillState({ previewUrl: '', objectUrl: '', fillId: null });
+    engine?.dispose();
+    thumbnailEngine?.dispose();
+    engine = null;
+    thumbnailEngine = null;
+  });
+
+  async function flipImage() {
+    if (!engine || imageBlockId == null) return;
+    engine.block.setFlipHorizontal(imageBlockId, true);
+    engine.block.setFlipVertical(imageBlockId, true);
+  }
+
   async function resetFlip() {
-    const isFlipped = await engine.block.getFlipHorizontal(imageBlockId);
+    if (!engine || imageBlockId == null) return;
+    const isFlipped = engine.block.getFlipHorizontal(imageBlockId);
     engine.block.setFlipHorizontal(imageBlockId, !isFlipped);
   }
 
-  async function resizeVideo() {
-    // Set absolute size
-    //engine.block.setWidth(videoBlockId, 1280.0);
-    //engine.block.setHeight(videoBlockId, 720.0);
-    
-    // Percentage-based sizing relative to the parent (e.g., page)
-    engine.block.setWidthMode(imageBlockId,  'Percent');
+  async function resizeImage() {
+    if (!engine || imageBlockId == null) return;
+    engine.block.setWidthMode(imageBlockId, 'Percent');
     engine.block.setHeightMode(imageBlockId, 'Percent');
-    engine.block.setWidth(imageBlockId,  1);   // full-width
-    engine.block.setHeight(imageBlockId, 0.5625);   // 16:9 ratio when width is 100 %
+    engine.block.setWidth(imageBlockId, 1);
+    engine.block.setHeight(imageBlockId, 0.5625);
   }
-  // callback to scale the video block
-    //function scaleMedia() {
-      //if (engine && videoBlockId != null) {
-        // scale the video block by 150% on each click
-        //engine.block.scale(videoBlockId, 1.5, 0.5, 0.5);
 
-        // Let the Engine Handle Scaling
-        //engine.block.setWidthMode(videoBlockId, 'Absolute');
-        //const width = engine.block.getWidth(videoBlockId) * 1.5;
-        //engine.block.setWidth(videoBlockId, width, true );
-        //console.log(engine.block.findAllProperties(videoBlockId));
+  async function removeBackgroundForFill(engineInstance, state, config = backgroundConfig) {
+    if (!engineInstance || state.fillId == null) return null;
+    const source = engineInstance.block.getString(state.fillId, 'fill/image/imageFileURI');
+    if (!source) return null;
+    const result = await removeBackground(source, config);
+    return result;
+  }
 
-        // Combine Crop-Scale with a Size Change
-        // => doesn't work as intented
-        //await engine.block.setCropScaleX(videoBlockId, 1.5);
-        //await engine.block.setWidthMode(videoBlockId, 'Absolute');
-        //const newWidth = (await engine.block.getWidth(videoBlockId)) * 1.5;
-        //await engine.block.setWidth(videoBlockId, newWidth);
+  async function removeBg() {
+    try {
+      const newBlob = await removeBackgroundForFill(engine, fillState);
+      if (!newBlob) return;
 
-        // Maintain Crop
-        //engine.block.scale(videoBlockId, 1.5);
-        //engine.block.setWidthMode(videoBlockId, 'Absolute');
-        //const newWidth = engine.block.getWidth(videoBlockId) * 1.5;
-        //engine.block.setWidth(videoBlockId, newWidth, true);
+      applyPreview(newBlob);
+      applyFill(newBlob);
+    } catch (error) {
+      console.error('Failed to remove background', error);
+    }
+  }
+  async function rotateImage() {
+    // Rotate the image by 90°
+    //engine.block.setRotation(imageBlockId, Math.PI / 2);
+    const toRadians = (degrees) => (degrees * Math.PI) / 180;
+    const toDegrees = (radians) => (radians * 180) / Math.PI;
 
-        // Rotate the clip by 90°
-        //engine.block.setRotation(videoBlockId, Math.PI / 2);
-        //engine.block.setScopeEnabled(videoBlockId, 'layer/rotate', false);
-        
-      //}
-      
-    //}
+    const targetRadians = toRadians(45); // 0.785398...
+    engine.block.setRotation(imageBlockId, targetRadians);
+
+    console.log('Image rotation is', toDegrees(targetRadians), '°');
+  }
+
+  async function greenScreen() {
+    if (!engine || imageBlockId == null || pageBlockId == null) return;
+
+    /* Previous approach kept for reference:
+    // Apply Green Screen effect
+    const chromaKeyEffect = engine.block.createEffect('green_screen');
+    // Key out blue instead of green
+    //engine.block.setFloat(chromaKeyEffect, 'green_screen/colorMatch', 0.25);
+    engine.block.setColor(
+      chromaKeyEffect,
+      'green_screen/fromColor',
+      { r: 0.3608, g: 0.6314, b: 0.4157, a: 1 }
+    );
+    //engine.block.setFloat(chromaKeyEffect, 'green_screen/smoothness', 0.1);
+    //engine.block.setFloat(chromaKeyEffect, 'green_screen/spill', 0.2);
+    //engine.block.appendEffect(imageBlockId, chromaKeyEffect);
     
-  </script>
+    // Create virtual background
+    const bgBlock = engine.block.create('graphic');
+    engine.block.setFill(bgBlock, backgroundImageFill);
+    engine.block.appendChild(page, bgBlock);
+    engine.block.sendToBack(bgBlock);
+    const videoBlock = engine.block.create('graphic');
+    engine.block.setFill(videoBlock, videoFill);
+    const chromaKey = engine.block.createEffect('green_screen');
+    */
+
+    const chromaKeyEffect = engine.block.createEffect('green_screen');
+    engine.block.setColor(
+      chromaKeyEffect,
+      'effect/green_screen/fromColor',
+      { r: 0.3608, g: 0.6314, b: 0.4157, a: 1 }
+    );
+    engine.block.appendEffect(imageBlockId, chromaKeyEffect);
+
+    if (!videoBlockId) {
+      videoBlockId = engine.block.create('graphic');
+      engine.block.setShape(videoBlockId, engine.block.createShape('rect'));
+      const videoFill = engine.block.createFill('video');
+      engine.block.setString(
+        videoFill,
+        'fill/video/fileURI',
+        'https://cdn.img.ly/assets/demo/v2/ly.img.video/videos/pexels-drone-footage-of-a-surfer-barrelling-a-wave-12715991.mp4'
+      );
+      engine.block.setFill(videoBlockId, videoFill);
+      engine.block.setWidthMode(videoBlockId, 'Percent');
+      engine.block.setHeightMode(videoBlockId, 'Percent');
+      engine.block.setWidth(videoBlockId, 1);
+      engine.block.setHeight(videoBlockId, 1);
+      engine.block.appendChild(pageBlockId, videoBlockId);
+      engine.block.sendToBack(videoBlockId);
+      engine.block.bringToFront(imageBlockId);
+    }
+  }
+
+  async function batchProcess() {
+    if (!engine) return;
+    const startedAt = performance.now();
+    const sceneData = await engine.scene.saveToString();
+    const thumbnail = await generateThumbnail(sceneData);
+    if (thumbnail) {
+      applyPreview(thumbnail);
+    }
+    reportBatchMetrics({
+      action: 'thumbnail_generation',
+      durationMs: Math.round(performance.now() - startedAt),
+      success: Boolean(thumbnail)
+    });
+  }
+
+  async function batchExport() {
+    if (!engine || pageBlockId == null || fillState.fillId == null) return;
+
+    const currentUri = engine.block.getString(fillState.fillId, 'fill/image/imageFileURI');
+
+    if (originalImageUri) {
+      engine.block.setString(fillState.fillId, 'fill/image/imageFileURI', originalImageUri);
+      await exportPageAsPdf('image-original.pdf');
+    }
+
+    if (currentUri) {
+      engine.block.setString(fillState.fillId, 'fill/image/imageFileURI', currentUri);
+      await exportPageAsPdf('image-edited.pdf');
+    }
+  }
+
+  async function exportCompressedImage() {
+    if (!engine || imageBlockId == null) return;
+
+    const scaledImage = {
+      mimeType: 'image/png',
+      pngCompressionLevel: 5,
+      targetWidth: 740,
+      targetHeight: 740
+    };
+
+    const pngData = await engine.block.export(imageBlockId, scaledImage);
+
+    downloadBlob(pngData,
+      'image-compressed.png');
+  }
+
+</script>
   
-  <div class="editor-container">
-    <div class="canvas-container" bind:this="{canvasContainer}"></div>
-    <div class="button-overlay">
-      <button on:click="{flipImage}">Flip</button>
-      <button on:click="{resetFlip}">Reset Flip</button>
-      <button on:click="{resizeVideo}">Resize</button>
-    </div>
-    </div>
+<div class="editor-container">
+  <div class="canvas-container" bind:this="{canvasContainer}"></div>
+  <div class="button-overlay">
+    <button on:click={() => rotateImage()}>Rotate</button>
+    <button on:click="{flipImage}">Flip</button>
+    <button on:click="{resetFlip}">Reset Flip</button>
+    <button on:click="{resizeImage}">Resize</button>
+    <button on:click={() => removeBg()}>Remove BG</button>
+    <button on:click={() => greenScreen()}>Green Screen</button>
+    <button on:click={() => batchProcess()}>Generate Thumbnail</button>
+    <button on:click={() => batchExport()}>Batch Export</button>
+    <button on:click={() => exportCompressedImage()}>Compress + Export</button>
+
+
+    <button on:click={() => exportImage()}>Export</button>
+    
+  </div>
+</div>
+
+{#if fillState.previewUrl}
+  <div class="preview">
+    <h3>Export preview</h3>
+    <img src="{fillState.previewUrl}" alt="Image has been exported" />
+  </div>
+{/if}
 
   <style>
     .editor-container {
@@ -195,5 +397,28 @@
     .button-overlay button:focus-visible {
       outline: 2px solid #646cff;
       outline-offset: 2px;
+    }
+
+    .preview {
+      margin: 16px;
+      padding: 12px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      max-width: 360px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+    }
+
+    .preview h3 {
+      margin: 0 0 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .preview img {
+      width: 100%;
+      display: block;
+      border-radius: 8px;
     }
   </style>

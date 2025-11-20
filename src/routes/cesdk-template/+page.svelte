@@ -14,9 +14,6 @@
   </script>
   
   {#if isClient && CreativeEditorSDK}
-    <CreativeEditorSDK
-      config={{
-        // Your custom configs here
-      }}
+  <svelte:component this={CreativeEditorSDK}/>
     />
   {/if}

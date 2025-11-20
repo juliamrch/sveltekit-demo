@@ -8,15 +8,15 @@
   let engine = null;
   const sceneUrl = 'https://cdn.img.ly/assets/demo/v2/ly.img.template/templates/cesdk_postcard_2.scene';
   let textVariables = {
-    first_name: '',
-    last_name: '',
-    address: '',
-    city: '',
+    first_name: 'Ada',
+    last_name: 'Lovelace',
+    address: '12 Analytical Avenue',
+    city: 'London',
   };
 
   onMount(async () => {
     const config = {
-      license: '<YOUR_LICENSE_KEY>',
+      license: '<YOUR_CSDK_LICENSE>',
     };
 
     engine = await CreativeEngine.init(config);
@@ -51,6 +51,45 @@
     };
     applyTextVariables();
   }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  async function batchFill() {
+    const records = await fetch('/api/cesdk-datasets.json').then((r) => r.json());
+    if (!records.length || !records[0]?.variables) return;
+
+    textVariables = {
+      ...textVariables,
+      ...records[0].variables,
+    };
+    applyTextVariables();
+  }
+
+  async function batchExport() {
+    if (!engine) return;
+    applyTextVariables();
+
+    const scene = engine.scene.get();
+    if (!scene) return;
+
+    const exportResult = await engine.block.export(scene, 'application/pdf');
+    const blob =
+      exportResult instanceof Blob
+        ? exportResult
+        : new Blob([exportResult], { type: 'application/pdf' });
+
+    downloadBlob(blob, 'template.pdf');
+  }
+
 </script>
 
 <div class="editor-container">
@@ -70,6 +109,9 @@
         </label>
       {/each}
       <button type="button" on:click="{applyTextVariables}">Apply</button>
+      <button type="button" on:click="{batchExport}">Download PDF</button>
+      <button type="button" on:click="{batchFill}">Fill from API</button>
+      
     </form>
   </div>
 </div>

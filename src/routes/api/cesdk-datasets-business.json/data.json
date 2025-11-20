@@ -1,0 +1,29 @@
+[
+  {
+    "id": "postcard-kilian",
+    "variables": {
+      "first_name": "Kilian",
+      "last_name": "Gautier",
+      "address": "58 Alpine Way",
+      "city": "Chamonix"
+    }
+  },
+  {
+    "id": "postcard-sofia",
+    "variables": {
+      "first_name": "Sofia",
+      "last_name": "Ibarra",
+      "address": "921 Avenida del Sol",
+      "city": "Monterrey"
+    }
+  },
+  {
+    "id": "postcard-yumi",
+    "variables": {
+      "first_name": "Yumi",
+      "last_name": "Tanaka",
+      "address": "44 Haru Street",
+      "city": "Kyoto"
+    }
+  }
+]

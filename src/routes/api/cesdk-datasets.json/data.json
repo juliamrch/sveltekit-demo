@@ -1,0 +1,29 @@
+[
+  {
+    "id": "postcard-ada",
+    "variables": {
+      "first_name": "Ada",
+      "last_name": "Lovelace",
+      "address": "12 Analytical Ave",
+      "city": "London"
+    }
+  },
+  {
+    "id": "postcard-grace",
+    "variables": {
+      "first_name": "Grace",
+      "last_name": "Hopper",
+      "address": "73 Debugger Way",
+      "city": "Arlington"
+    }
+  },
+  {
+    "id": "postcard-katherine",
+    "variables": {
+      "first_name": "Katherine",
+      "last_name": "Johnson",
+      "address": "86 Apollo Drive",
+      "city": "White Sulphur Springs"
+    }
+  }
+]

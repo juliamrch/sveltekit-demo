@@ -37,8 +37,10 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@cesdk/cesdk-js": "^1.58.0",
-		"@cesdk/engine": "^1.58.0",
+		"@cesdk/cesdk-js": "1.60.0",
+		"@cesdk/engine": "1.60.0",
+		"@imgly/background-removal": "^1.7.0",
+		"@imgly/plugin-background-removal-web": "^1.2.1",
 		"@lukeed/uuid": "^2.0.0",
 		"@tailwindcss/forms": "^0.5.3",
 		"cities.json": "^1.1.16",
@@ -47,6 +49,7 @@
 		"daisyui": "^2.46.0",
 		"firebase": "^9.15.0",
 		"graphql-request": "^5.1.0",
+		"onnxruntime-web": "^1.21.0",
 		"simple-svelte-autocomplete": "^2.5.1",
 		"stensvelte_hydrate": "^0.0.2",
 		"theme-change": "^2.2.0"

@@ -12,11 +12,24 @@
     // to store the ID of the video block added to the scene
     /** @type {number | null} */
     let videoBlockId = null;
+    let pageBlockId = null;
+    let videoFillId = null;
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
   
     onMount(async () => {
       // your CE.SDK configurations
       const config = {
-        license: '<YOUR_LICENSE_KEY>', // replace this with your CE.SDK license
+        license: '<YOUR_CSDK_LICENSE>', // replace this with your CE.SDK license
       };
   
       // initialize CreativeEngine in headless mode
@@ -41,28 +54,37 @@
       if (!page) {
         engine.block.appendChild(scene, targetPage);
       }
+      pageBlockId = targetPage;
   
       // append a block to show a video on the page
-      const videoBlock = engine.block.create('graphic');
-      videoBlockId = videoBlock;
-      engine.block.setShape(videoBlock, engine.block.createShape('rect'));
-      const videoFill = engine.block.createFill('video');
-      engine.block.setString(
-        videoFill,
-        'fill/video/fileURI',
-        'https://cdn.img.ly/assets/demo/v2/ly.img.video/videos/pexels-drone-footage-of-a-surfer-barrelling-a-wave-12715991.mp4'
-      );
-      engine.block.setFill(videoBlock, videoFill);
-      engine.block.setSize(targetPage, 1280, 720, { maintainCrop: false });
-      engine.block.setSize(videoBlock, 640, 360);
-      engine.block.appendChild(targetPage, videoBlock);
+      // 1. Créer le bloc graphique et sa forme
+const bgBlock = engine.block.create('graphic');
+const rectShape = engine.block.createShape('rect');
+engine.block.setShape(bgBlock, rectShape);
 
-      // zoom to fit the video in the editor view
-      engine.scene.zoomToBlock(targetPage);
-      //engine.block.setTransformLocked(videoBlockId, true);
-      // Prevent manual resizing
-      //engine.editor.setGlobalScope('layer/resize', 'Defer'); // do this once, after init
-      //engine.block.setScopeEnabled(videoBlockId, "layer/resize", false);
+// 2. Créer et configurer le fill (image ou vidéo)
+const bgFill = engine.block.createFill('video'); // ou 'image'
+videoFillId = bgFill;
+engine.block.setString(
+  bgFill,
+  'fill/video/fileURI', // 'fill/image/imageFileURI' pour une image
+  'https://cdn.img.ly/assets/demo/v2/ly.img.video/videos/pexels-drone-footage-of-a-surfer-barrelling-a-wave-12715991.mp4'
+);
+engine.block.setFill(bgBlock, bgFill);
+
+// 3. Dimensionner pour couvrir la scène
+engine.block.setWidthMode(bgBlock, 'Percent');
+engine.block.setHeightMode(bgBlock, 'Percent');
+engine.block.setWidth(bgBlock, 1);
+engine.block.setHeight(bgBlock, 1);
+engine.block.setPositionX(bgBlock, 0);
+engine.block.setPositionY(bgBlock, 0);
+
+// 4. Insérer derrière les autres éléments
+engine.block.appendChild(page, bgBlock);
+engine.block.sendToBack(bgBlock);
+videoBlockId = bgBlock;
+
     });
   // Code tests for guides
   
@@ -144,6 +166,59 @@
       
     //}
     
+  async function generateThumbnail() {
+    if (!engine) return;
+    const [page] = engine.scene.getPages();
+    if (!page) return;
+
+    const fallbackVideoBlock =
+      videoBlockId ??
+      (() => {
+        const children = engine.block.getChildren(page);
+        return children.find((child) => engine.block.getType(child) === 'video') ?? null;
+      })();
+    const targetVideoFill =
+      videoFillId ??
+      (fallbackVideoBlock != null ? engine.block.getFill(fallbackVideoBlock) : null);
+    if (!targetVideoFill) return;
+
+    await engine.block.setPlaybackTime(targetVideoFill, 4.2);
+    const exportResult = await engine.block.export(page, {
+      mimeType: 'image/png',
+      targetWidth: 640,
+      targetHeight: 360,
+    });
+
+    const blob =
+      exportResult instanceof Blob
+        ? exportResult
+        : new Blob([exportResult], { type: 'image/png' });
+
+    downloadBlob(blob, 'scene-thumb.png');
+  }
+
+  async function exportCompressedVideo() {
+    if (!engine || pageBlockId == null) return;
+  const exportOptions = {
+    mimeType: 'video/mp4',
+    h264Profile: 77,
+    h264Level: 52,
+    videoBitrate: 2_000_000,
+    audioBitrate: 128_000,
+    framerate: 30,
+    targetWidth: 1280,
+    targetHeight: 720
+  };
+
+    const exportResult = await engine.block.exportVideo(pageBlockId, exportOptions);
+    const maxSize = engine.editor.getMaxExportSize()
+    const availableMemory = engine.editor.getAvailableMemory()
+    console.log("Max export size:", maxSize, "Memory:", availableMemory)
+
+
+    downloadBlob(exportResult, 'video-compressed.mp4');
+  };
+  
   </script>
   
   <div class="editor-container">
@@ -152,6 +227,8 @@
       <button on:click="{flipVideo}">Flip</button>
       <button on:click="{resetFlip}">Reset Flip</button>
       <button on:click="{resizeVideo}">Resize</button>
+      <button on:click="{generateThumbnail}">Generate Thumbnail</button>
+      <button on:click="{exportCompressedVideo}">Compress + Export</button>
     </div>
     </div>
 

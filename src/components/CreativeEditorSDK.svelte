@@ -1,5 +1,8 @@
 <script>
     import CreativeEditorSDK from '@cesdk/cesdk-js';
+    import CreativeEngine from '@cesdk/engine';
+    
+    //import BackgroundRemovalPlugin from '@imgly/plugin-background-removal-web';
     import { onDestroy, onMount } from 'svelte';
   
     // reference to the container HTML element where CE.SDK will be initialized
@@ -8,8 +11,10 @@
     // where to keep track of the CE.SDK instance
     /** @type {any}*/
     let cesdk = null;
+    /** @type {CreativeEngine | null}*/
+    let engine = null;
   
-    const DEFAULT_TEMPLATE_URL = 'https://cdn.img.ly/assets/demo/v2/ly.img.template/templates/cesdk_postcard_2.scene';
+    //const DEFAULT_TEMPLATE_URL = 'https://cdn.img.ly/assets/demo/v2/ly.img.template/templates/cesdk_postcard_2.scene';
 
     // deafult CreativeEditor SDK configuration
     /** @type {Record<string, any>}*/
@@ -18,7 +23,7 @@
     /** @type {'local'}*/
     const ON_UPLOAD = 'local';
     const defaultConfig = {
-      license: '<YOUR_LICENSE_KEY>', // replace it with a valid CE.SDK license key
+      license: '<YOUR_CSDK_LICENSE>', // replace it with a valid CE.SDK license key
       callbacks: { onUpload: ON_UPLOAD }, // enable local file uploads in the Asset Library
       // other default configs...
     };
@@ -41,6 +46,7 @@
         // using the given config
         CreativeEditorSDK.create(container, ceSDKConfig).then(async instance => {
           cesdk = instance;
+          engine = instance.engine;
   
           // do something with the instance of CreativeEditor SDK (e.g., populate
           // the asset library with default / demo asset sources)
@@ -48,15 +54,27 @@
             cesdk.addDefaultAssetSources(),
             cesdk.addDemoAssetSources({ sceneMode: 'Design' }),
           ]);
+
+          //await cesdk.addPlugin(
+            //BackgroundRemovalPlugin({
+              //ui: {
+                //locations: ['canvasMenu'],
+              //},
+            //}),  
+          //);
+          await cesdk.createDesignScene();
+          // Hide rotate handles on the control gizmo once the scene is ready
+          //engine.editor.setSetting('controlGizmo/showRotateHandles', false);
+                          
   
           // load a predefined template; fallback to a blank scene when loading fails
-          try {
-            await cesdk.engine?.scene?.loadFromURL(DEFAULT_TEMPLATE_URL);
-          } catch (error) {
-            console.warn('Falling back to a blank scene because loading the default template failed.', error);
-            await cesdk.createDesignScene();
-          }
-          //instance.engine?.editor?.setSettingBool('controlGizmo/showRotateHandles', false);
+          //try {
+            //await cesdk.engine?.scene?.loadFromURL(DEFAULT_TEMPLATE_URL);
+          //} catch (error) {
+            //console.warn('Falling back to a blank scene because loading the default template failed.', error);
+            //await cesdk.createDesignScene();
+          //}
+          //engine.editor?.setSetting('controlGizmo/showRotateHandles', false);
           
           // Register a custom button component that exports the current scene as PDF
           //instance.ui.registerComponent(
