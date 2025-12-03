@@ -15,7 +15,7 @@
   let pageBlockId = null;
 
   const engineConfig = {
-    license: '<YOUR_CSDK_LICENSE>'
+    license: 'YOUR_CESDK_LICENSE_KEY',
   };
   /** @type {{ fillId: number | null; previewUrl: string; objectUrl: string }} */
   let fillState = {
@@ -172,6 +172,50 @@
     engine = null;
     thumbnailEngine = null;
   });
+
+  async function autoSize() {
+    // Fill 50% of parent width, 100% of parent height
+    if (!engine || imageBlockId == null) return;
+    engine.block.setSize(imageBlockId, 0.5, 1.0, { sizeMode: 'Percent' });
+
+    // Get computed dimensions (actual pixel values after layout)
+    const computedWidth = engine.block.getFloat(imageBlockId,"lastFrame/width");
+    const computedHeight = engine.block.getFloat(imageBlockId, "lastFrame/height");
+
+    console.log(`Rendered size: ${computedWidth} x ${computedHeight}`);
+  }
+
+  async function addBg() {
+    if (!engine) return;
+    if (pageBlockId == null) {
+      const scene = engine.scene.get() ?? engine.scene.create();
+      const [existingPage] = engine.block.findByType('page');
+      pageBlockId = existingPage ?? engine.block.create('page');
+      if (!existingPage) {
+        engine.block.appendChild(scene, pageBlockId);
+      }
+    }
+    const bgBlockUrl = new URL(
+      `${import.meta.env.BASE_URL}bg.jpg`,
+      window.location.origin
+    ).href;
+
+    // Create background image that fills page
+    const bgBlock = engine.block.create('graphic');
+    engine.block.setShape(bgBlock, engine.block.createShape('rect'));
+    const imageFill = engine.block.createFill('image');
+    engine.block.setString(imageFill, 'fill/image/imageFileURI', bgBlockUrl);
+    engine.block.setFill(bgBlock, imageFill);
+    engine.block.setContentFillMode(bgBlock, 'Cover');
+
+    // Add to page
+    engine.block.appendChild(pageBlockId, bgBlock);
+
+    // Send to back so other content appears on top
+    engine.block.sendToBack(bgBlock);
+    //console.log('Added page background', { pageBlockId, bgBlockUrl, bgBlock });
+
+  }
 
   async function flipImage() {
     if (!engine || imageBlockId == null) return;
@@ -331,6 +375,8 @@
 <div class="editor-container">
   <div class="canvas-container" bind:this="{canvasContainer}"></div>
   <div class="button-overlay">
+    <button on:click={() => autoSize()}>Auto-size</button>
+    <button on:click={() => addBg()}>Add Background</button>
     <button on:click={() => rotateImage()}>Rotate</button>
     <button on:click="{flipImage}">Flip</button>
     <button on:click="{resetFlip}">Reset Flip</button>
